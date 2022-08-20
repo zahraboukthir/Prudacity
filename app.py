@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------------#
 # Imports
 #----------------------------------------------------------------------------#
+import re
 import sys
 from flask_migrate import Migrate
 import json
@@ -250,7 +251,35 @@ def create_venue_submission():
   #   db.session.close()
   # return render_template('pages/home.html')
   form = VenueForm(request.form)
-  NewVenue = Venue(name=request.form['name'],
+ 
+  if form.validate():
+    # form.validate_on_submit()
+    error = False
+    if request.form['phone'] == "":
+            flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
+            return render_template('forms/new_venue.html', form=form)
+    if request.form['phone'].isalpha():
+            flash('Invalid phone number format', 'error')
+            return render_template('forms/new_venue.html', form=form)
+    if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
+            flash('Invalid phone number', 'error')
+            return render_template('forms/new_venue.html', form=form)
+    if  request.form['image_link'] == "":
+            flash('Please provide a valid URL for the image link.', 'error')
+            return render_template('forms/new_venue.html', form=form)
+    if request.form['website_link'] == "":
+            flash('Please provide a valid URL for the website link.', 'error')
+            return render_template('forms/new_venue.html', form=form)
+    if request.form['seeking_talent']  == "y":
+            seeking_talent = True
+            if request.form['seeking_description']  == "":
+                flash('Please enter a description for the talent you seek.', 'error')
+                return render_template('forms/new_venue.html', form=form)
+            else:
+                 seeking_talent = False
+
+  try:
+    NewVenue = Venue(name=request.form['name'],
   city=request.form['city'],
   state=request.form['state'],
   address=request.form['address'],
@@ -259,22 +288,8 @@ def create_venue_submission():
   facebook_link=request.form.get('facebook_link'),
   genres=request.form.getlist('genres'),
   website=request.form['website_link'],
-  seeking_talent=request.form.get('seeking_talent', False),
+  seeking_talent=seeking_talent ,
   seeking_description=request.form['seeking_description'])
-  if form.validate():
-    # form.validate_on_submit()
-    error = False
-    if request.form['phone'] == "":
-            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
-            return render_template('forms/new_venue.html', form=form)
-    if  request.form['image_link'] == "":
-            flash('Please provide a valid URL for the image link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
-    if request.form['website_link'] == "":
-            flash('Please provide a valid URL for the website link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
-
-  try:
     db.session.add(NewVenue)
     db.session.commit()
   except:
@@ -503,29 +518,42 @@ def create_artist_submission():
     #         flash('"Invalid phone number"', 'error')
     #         return render_template('forms/new_venue.html', form=form)
   form = ArtistForm(request.form)
-  NewArtist = Artist(name=request.form.get('name'),
-    city=  request.form.get('city'),
-    state=  request.form.get('state'),
-    phone=  request.form.get('phone'),
-    genres= request.form.getlist('genres'),
-    facebook_link=  request.form.get('facebook_link'),
-    image_link=request.form.get('image_link'),
-    website= request.form.get('website'),
-    seeking_description=request.form.get('seeking_description'))
+ 
   if form.validate():
     # form.validate_on_submit()
     error = False
     if request.form['phone'] == "":
-            flash('Please provide a phone number with a maximum length of 15 characters.', 'error')
-            return render_template('forms/new_venue.html', form=form)
+            flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
+            return render_template('forms/new_artist.html', form=form)
+    if request.form['phone'].isalpha():
+            flash('Invalid phone number format', 'error')
+            return render_template('forms/new_artist.html', form=form)
+    if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
+            flash('Invalid phone number', 'error')
+            return render_template('forms/new_artist.html', form=form)
     if  request.form['image_link'] == "":
             flash('Please provide a valid URL for the image link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
+            return render_template('forms/new_artist.html', form=form)
     if request.form['website_link'] == "":
             flash('Please provide a valid URL for the website link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
-
+            return render_template('forms/new_artist.html', form=form)
+    if request.form['seeking_venue'] == "y":
+            seeking_venue = True
+            if request.form['seeking_description'] == "":
+                flash('Please enter a description for the venue you seek.', 'error')
+                return render_template('forms/new_artist.html', form=form)
+            else:
+                seeking_venue = False
   try:
+    NewArtist = Artist(name=request.form['name'],
+    city=  request.form['city'],
+    state=  request.form['state'],
+    phone=  request.form['phone'],
+    genres= request.form.getlist('genres'),
+    facebook_link=  request.form['facebook_link'],
+    image_link=request.form['image_link'],
+    website=request.form['website_link'],
+    seeking_description=request.form['seeking_description'],seeking_venue=seeking_venue)  
     db.session.add(NewArtist)
     db.session.commit()
   except:
@@ -618,16 +646,36 @@ def create_shows():
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
+  form = ShowForm(request.form)
+  if request.form['artist_id'] == '' or request.form['venue_id'] == '':
+        flash('fill the id artist and id venue.', 'error')
+        return render_template('forms/new_show.html', form=form)
+
+  if form.validate():
+        error = False
+        if Artist.query.get(request.form['artist_id']) == None:
+            flash(' ID artist does not exists.', 'error')
+            return render_template('forms/new_show.html', form=form)
+        elif Venue.query.get(request.form['venue_id']) == None:
+            flash('ID venue does not exists.', 'error')
+            return render_template('forms/new_show.html', form=form)
   try: 
     db.session.add(Show(venues_id=request.form.get('venue_id'),artists_id=request.form.get('artist_id'),start_time=request.form.get('start_time')))
     db.session.commit()
-    flash('Show was successfully listed!')
+    # flash('Show was successfully listed!')
   except: 
     db.session.rollback()
-    flash('An error occurred. Show could not be listed.')
+    error = True
+    print(sys.exc_info())
+    # flash('An error occurred. Show could not be listed.')
   finally:
     db.session.close()
-  return render_template('pages/home.html')
+  if not error:
+            flash('Show was successfully listed!', 'success')
+            return redirect(url_for('index'))
+  else:
+            flash('An error occurred. Show could not be listed.', 'error')
+            return render_template('forms/new_show.html', form=form)
 
 @app.errorhandler(404)
 def not_found_error(error):
