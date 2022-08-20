@@ -498,6 +498,10 @@ def create_artist_submission():
   # finally:
   #   db.session.close()
   # return render_template('pages/home.html')
+
+    # if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
+    #         flash('"Invalid phone number"', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
   form = ArtistForm(request.form)
   NewArtist = Artist(name=request.form.get('name'),
     city=  request.form.get('city'),
