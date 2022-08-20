@@ -277,10 +277,6 @@ def create_venue_submission():
             if request.form['seeking_description'] == "":
                 flash('Please enter a description for the venue you seek.', 'error')
                 return render_template('forms/new_venue.html', form=form)
-            
-    
-            
-
   try:
     NewVenue = Venue(name=request.form['name'],
   city=request.form['city'],
@@ -525,7 +521,9 @@ def create_artist_submission():
   if form.validate():
     # form.validate_on_submit()
     error = False
+
     seeking_venue = False
+
     if request.form['phone'] == "":
             flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
             return render_template('forms/new_artist.html', form=form)
@@ -545,19 +543,18 @@ def create_artist_submission():
             seeking_venue = True
             if request.form['seeking_description'] == "":
                 flash('Please enter a description for the venue you seek.', 'error')
-                return render_template('forms/new_artist.html', form=form)
-           
-                
+                return render_template('forms/new_artist.html', form=form)            
   try:
     NewArtist = Artist(name=request.form['name'],
-    city=  request.form['city'],
-    state=  request.form['state'],
-    phone=  request.form['phone'],
-    genres= request.form.getlist('genres'),
-    facebook_link=  request.form['facebook_link'],
+    seeking_venue=seeking_venue,
+    city=request.form['city'],
+    state=request.form['state'],
+    phone=request.form['phone'],
     image_link=request.form['image_link'],
+    facebook_link=request.form.get('facebook_link'),
+    genres=request.form.getlist('genres'),
     website=request.form['website_link'],
-    seeking_description=request.form['seeking_description'],seeking_venue=seeking_venue)  
+    seeking_description=request.form['seeking_description'])    
     db.session.add(NewArtist)
     db.session.commit()
   except:
@@ -654,7 +651,6 @@ def create_show_submission():
   if request.form['artist_id'] == '' or request.form['venue_id'] == '':
         flash('fill the id artist and id venue.', 'error')
         return render_template('forms/new_show.html', form=form)
-
   if form.validate():
         error = False
         if Artist.query.get(request.form['artist_id']) == None:
