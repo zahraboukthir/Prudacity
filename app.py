@@ -14,6 +14,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 import pytz
+from sqlalchemy import desc
 from forms import *
 #----------------------------------------------------------------------------#
 # App Config.
@@ -143,7 +144,7 @@ def search_venues():
   utc=pytz.UTC
   taw = utc.localize(datetime.now()) 
   kifchybanou = []
-  for v in Venue.query.filter(Venue.name.ilike(f"%{request.form.get('search_term')}")).all():
+  for v in Venue.query.filter(Venue.name.ilike(f'%{request.form.get("search_term")}%')).all():
     gdchlga = 0
     for shows in v.shows:
        if(shows.start_time > taw):
@@ -156,49 +157,46 @@ def search_venues():
   return render_template('pages/search_venues.html', results={
     "count": len(kifchybanou),
     "data":kifchybanou}, search_term=request.form.get('search_term', ''))
-
+ 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-
-  utc=pytz.UTC
-  taw = utc.localize(datetime.now()) 
-  v = Venue.query.get(venue_id)
-  shows = db.session.query(Show).join(Artist).all()
-  artist=db.session.query(Artist)
-  fatou= []
-  mazalou = []
-  showsfatou=[]
-  showsmazalou=[]
-  for s in shows:
-    if s.venues_id == v.id:
-      if s.start_time < taw:
-        fatou.append(s)
-      else:
-        mazalou.append(s)
-  
-
-  for show in fatou:
-    for a in artist:
-      if a.id==show.artists_id:
-        showsfatou.append({
+  if(len(Venue.query.filter_by(id=venue_id).all())!=0):
+    utc=pytz.UTC
+    taw = utc.localize(datetime.now()) 
+    v = Venue.query.get(venue_id)
+    shows = db.session.query(Show).join(Artist).all()
+    artist=db.session.query(Artist)
+    fatou= []
+    mazalou = []
+    showsfatou=[]
+    showsmazalou=[]
+    for s in shows:
+      if s.venues_id == v.id:
+        if s.start_time < taw:
+          fatou.append(s)
+        else:
+          mazalou.append(s)
+    for show in fatou:
+      for a in artist:
+        if a.id==show.artists_id:
+          showsfatou.append({
             'artist_id': show.artists_id,
             'artist_name': a.name,
             'artist_image_link': a.image_link,
             'start_time': show.start_time.strftime("%c")
             })
-
-  for show in mazalou:
-    for a in artist:
-      if a.id==show.artists_id:
-         showsmazalou.append({
+    for show in mazalou:
+      for a in artist:
+        if a.id==show.artists_id:
+          showsmazalou.append({
             'artist_id': show.artists_id,
             'artist_name': a.name,
             'artist_image_link': a.image_link,
             'start_time': show.start_time.strftime("%c")
             })
-  vi = {
+    vi= {
             'id': v.id,
             'name': v.name,
             'genres': v.genres,
@@ -217,7 +215,10 @@ def show_venue(venue_id):
             'upcoming_shows_count': len(showsmazalou)
             }
 
-  return render_template('pages/show_venue.html', venue=vi)
+    return render_template('pages/show_venue.html', venue=vi)
+  else:
+    flash('Venue does not exist')
+    return redirect(url_for('venues'))
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -229,55 +230,37 @@ def create_venue_form():
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-  # try:
-  #   NewVenue = Venue(name=request.form.get('name'),
-  #   city=request.form.get('city'),
-  #   state=request.form.get('state'),
-  #   address=request.form.get('address'),
-  #   phone=request.form.get('phone'),
-  #   image_link=request.form.get('image_link'),
-  #   facebook_link=request.form.get('facebook_link'),
-  #   genres=request.form.getlist('genres'),
-  #   website=request.form.get('website'),
-  #   seeking_talent=True,
-  #   seeking_description=request.form.get('seeking_description'))
-  #   db.session.add(NewVenue)
-  #   db.session.commit()
-  # # on successful db insert, flash success
-  #   flash('Venue ' + request.form['name'] + ' was successfully listed!')
-  # except: 
-  #   db.session.rollback()
-  #   flash('An error occurred. Venue '+ request.form['name'] + ' could not be listed.')
-  # finally:
-  #   db.session.close()
-  # return render_template('pages/home.html')
+
   form = VenueForm(request.form)
  
   if form.validate():
     # form.validate_on_submit()
     error = False
+    exist = False
+    allv=Venue.query.all()
     seeking_talent=False
-    if request.form['phone'] == "":
-            flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
-            return render_template('forms/new_venue.html', form=form)
+    # if request.form['phone'] == "":
+    #         flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
     if request.form['phone'].isalpha():
             flash('Invalid phone number format', 'error')
             return render_template('forms/new_venue.html', form=form)
     if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
             flash('Invalid phone number', 'error')
             return render_template('forms/new_venue.html', form=form)
-    if  request.form['image_link'] == "":
-            flash('Please provide a valid URL for the image link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
-    if request.form['website_link'] == "":
-            flash('Please provide a valid URL for the website link.', 'error')
-            return render_template('forms/new_venue.html', form=form)
+    # if  request.form['image_link'] == "":
+    #         flash('Please provide a valid URL for the image link.', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
+    # if request.form['website_link'] == "":
+    #         flash('Please provide a valid URL for the website link.', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
     if request.form.get('seeking_talent')  == 'y':
             seeking_talent = True
             if request.form['seeking_description'] == "":
                 flash('Please enter a description for the venue you seek.', 'error')
                 return render_template('forms/new_venue.html', form=form)
   try:
+    
     NewVenue = Venue(name=request.form['name'],
   city=request.form['city'],
   state=request.form['state'],
@@ -289,6 +272,10 @@ def create_venue_submission():
   website=request.form['website_link'],
   seeking_talent=seeking_talent,
   seeking_description=request.form['seeking_description'])
+    for v in allv:
+      if v==NewVenue:
+        flash('Invalid phone number format', 'error')
+        return render_template('forms/new_venue.html', form=form)
     db.session.add(NewVenue)
     db.session.commit()
   except:
@@ -346,61 +333,104 @@ def search_artists():
 def show_artist(artist_id):
   # shows the artist page with the given artist_id
   # TODO: replace with real artist data from the artist table, using artist_id
-  utc=pytz.UTC
-  taw = utc.localize(datetime.now()) 
-  artists = Artist.query.get(artist_id)
-  shows = db.session.query(Show).join(Venue).all()
-  aLLven=db.session.query(Venue)
-  fatou= []
-  mazalou = []
-  showsfatou=[]
-  showsmazalou=[]
-  genres=[]
-  for s in shows:
-    if s.artists_id == artists.id:
-      if s.start_time < taw:
-        fatou.append(s)
-      else:
-        mazalou.append(s)
+  # utc=pytz.UTC
+  # taw = utc.localize(datetime.now()) 
+  # artists = Artist.query.get(artist_id)
+  # shows = db.session.query(Show).join(Venue).all()
+  # aLLven=db.session.query(Venue)
+  # fatou= []
+  # mazalou = []
+  # showsfatou=[]
+  # showsmazalou=[]
+  # genres=[]
+  # for s in shows:
+  #   if s.artists_id == artists.id:
+  #     if s.start_time < taw:
+  #       fatou.append(s)
+  #     else:
+  #       mazalou.append(s)
   
 
-  for show in fatou:
-    for a in aLLven:
-      if a.id==show.venues_id:
-        showsfatou.append({
-            'venue_id': show.artists_id,
-            'venue_name': a.name,
-            'venue_image_link': a.image_link,
-            'start_time': show.start_time.strftime("%c")
-            })
+  # for show in fatou:
+  #   for a in aLLven:
+  #     if a.id==show.venues_id:
+  #       showsfatou.append({
+  #           'venue_id': show.artists_id,
+  #           'venue_name': a.name,
+  #           'venue_image_link': a.image_link,
+  #           'start_time': show.start_time.strftime("%c")
+  #           })
 
-  for show in mazalou:
-    for a in aLLven:
-      if a.id==show.venues_id:
-         showsmazalou.append({
-            'venue_id': show.artists_id,
-            'venue_name': a.name,
-            'venue_image_link': a.image_link,
-            'start_time': show.start_time.strftime("%c")
-            })
+  # for show in mazalou:
+  #   for a in aLLven:
+  #     if a.id==show.venues_id:
+  #        showsmazalou.append({
+  #           'venue_id': show.artists_id,
+  #           'venue_name': a.name,
+  #           'venue_image_link': a.image_link,
+  #           'start_time': show.start_time.strftime("%c")
+  #           })
 
-  vi={
-    "id": artists.id,
-    "name":artists.name,
-    "genres":artists.genres,
-    "city": artists.city,
-    "state": artists.state,
-    "phone": artists.phone,
-    "seeking_venue": artists.seeking_venue,
-    "image_link": artists.image_link,
-    "seeking_description":artists.seeking_description,
-    'past_shows': showsfatou,
-    'upcoming_shows': showsmazalou,
-    'past_shows_count': len(showsfatou),
-    'upcoming_shows_count': len(showsmazalou)
-  }
-  return render_template('pages/show_artist.html', artist=vi)
-
+  # vi={
+  #   "id": artists.id,
+  #   "name":artists.name,
+  #   "genres":artists.genres,
+  #   "city": artists.city,
+  #   "state": artists.state,
+  #   "phone": artists.phone,
+  #   "seeking_venue": artists.seeking_venue,
+  #   "image_link": artists.image_link,
+  #   "seeking_description":artists.seeking_description,
+  #   'past_shows': showsfatou,
+  #   'upcoming_shows': showsmazalou,
+  #   'past_shows_count': len(showsfatou),
+  #   'upcoming_shows_count': len(showsmazalou)
+  # }
+  # return render_template('pages/show_artist.html', artist=vi)
+  utc=pytz.UTC
+  myartist = Artist.query.get(artist_id)
+  if(len(Artist.query.filter_by(id=artist_id).all())!=0):
+    past = []
+    for show in Show.query.filter(Show.artists_id==artist_id).order_by(desc(Show.start_time)).limit(10):
+      if show.start_time < utc.localize(datetime.now()):
+        past.append({
+          "venue_id":show.venues_id,
+          "venue_name":Venue.query.filter(Venue.id==show.venues_id).first().name,
+          "venue_image_link":Venue.query.filter(Venue.id==show.venues_id).first().image_link,
+          "start_time":show.start_time.strftime("%c")
+          
+        })  
+    upcoming = []
+    for show in Show.query.filter(Show.artists_id==artist_id).order_by(desc(Show.start_time)).limit(10):
+      if show.start_time > utc.localize(datetime.now()):
+        upcoming.append({
+          "venue_id":show.venues_id,
+          "venue_name":Venue.query.filter(Venue.id==show.venues_id).first().name,
+          "venue_image_link":Venue.query.filter(Venue.id==show.venues_id).first().image_link,
+          "start_time":show.start_time.strftime("%c")
+        })
+    data={
+      "id": myartist.id,
+      "name": myartist.name,
+      "genres": myartist.genres,
+      "city": myartist.city,
+      "state": myartist.state,
+      "phone": myartist.phone,
+      "website": myartist.website,
+      "facebook_link": myartist.facebook_link,
+      "seeking_venue": myartist.seeking_venue,
+      "seeking_description": myartist.seeking_description,
+      "image_link": myartist.image_link,
+      "past_shows": past,
+      "upcoming_shows": upcoming,
+      "past_shows_count": len(past),
+      "upcoming_shows_count": len(upcoming)
+    }
+    data = list(filter(lambda d: d['id'] == artist_id, [data]))[0]
+    return render_template('pages/show_artist.html',past_shows=past,upcoming_shows=upcoming,artist=data)
+  else:
+    flash('Artist does not exist')
+    return redirect(url_for('artists'))
 #  Update
 #  ----------------------------------------------------------------
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
