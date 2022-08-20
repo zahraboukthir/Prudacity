@@ -274,7 +274,7 @@ def create_venue_submission():
   seeking_description=request.form['seeking_description'])
     for v in allv:
       if v==NewVenue:
-        flash('Invalid phone number format', 'error')
+        flash('exust v', 'error')
         return render_template('forms/new_venue.html', form=form)
     db.session.add(NewVenue)
     db.session.commit()
