@@ -231,66 +231,98 @@ def create_venue_form():
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
 
-  form = VenueForm(request.form)
- 
-  if form.validate():
-    # form.validate_on_submit()
-    error = False
-    exist = False
-    allv=Venue.query.all()
-    seeking_talent=False
     # if request.form['phone'] == "":
-    #         flash('Your Phone number has to be 15 number in format XXX-XXX-XXXX', 'error')
+    #         flash('Your Phone number has to be 15 number in format ', 'error')
     #         return render_template('forms/new_venue.html', form=form)
-    if request.form['phone'].isalpha():
-            flash('Invalid phone number format', 'error')
-            return render_template('forms/new_venue.html', form=form)
-    if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
-            flash('Invalid phone number', 'error')
-            return render_template('forms/new_venue.html', form=form)
+    # if request.form['phone'].isalpha():
+    #         flash('Invalid phone number format', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
+    # if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
+    #         flash('Invalid phone number', 'error')
+    #         return render_template('forms/new_venue.html', form=form)
     # if  request.form['image_link'] == "":
     #         flash('Please provide a valid URL for the image link.', 'error')
     #         return render_template('forms/new_venue.html', form=form)
     # if request.form['website_link'] == "":
     #         flash('Please provide a valid URL for the website link.', 'error')
     #         return render_template('forms/new_venue.html', form=form)
-    if request.form.get('seeking_talent')  == 'y':
-            seeking_talent = True
-            if request.form['seeking_description'] == "":
-                flash('Please enter a description for the venue you seek.', 'error')
-                return render_template('forms/new_venue.html', form=form)
-  try:
+    # if request.form.get('seeking_talent')  == 'y':
+    #         seeking_talent = True
+    #         if request.form['seeking_description'] == "":
+    #             flash('Please enter a description for the venue you seek.', 'error')
+    #             return render_template('forms/new_venue.html', form=form)
+  # try:
     
-    NewVenue = Venue(name=request.form['name'],
-  city=request.form['city'],
-  state=request.form['state'],
-  address=request.form['address'],
-  phone=request.form['phone'],
-  image_link=request.form['image_link'],
-  facebook_link=request.form.get('facebook_link'),
-  genres=request.form.getlist('genres'),
-  website=request.form['website_link'],
-  seeking_talent=seeking_talent,
-  seeking_description=request.form['seeking_description'])
-    for v in allv:
-      if v==NewVenue:
-        flash('exust v', 'error')
-        return render_template('forms/new_venue.html', form=form)
-    db.session.add(NewVenue)
-    db.session.commit()
-  except:
-            error = True
-            db.session.rollback()
-            print(sys.exc_info())
-  finally:
-            db.session.close()
-  if not error:
-            flash('Venue ' + request.form['name'] + ' was successfully listed!', 'success')
-            return redirect(url_for('index'))
-  else:
-            flash('An error occurred. Venue ' +
-               request.form['name'] + ' could not be listed.', 'error')
+  #   NewVenue = Venue(name=request.form['name'],
+  # city=request.form['city'],
+  # state=request.form['state'],
+  # address=request.form['address'],
+  # phone=request.form['phone'],
+  # image_link=request.form['image_link'],
+  # facebook_link=request.form.get('facebook_link'),
+  # genres=request.form.getlist('genres'),
+  # website=request.form['website_link'],
+  # seeking_talent=seeking_talent,
+  # seeking_description=request.form['seeking_description'])
+  #   for v in allv:
+  #     if v==NewVenue:
+  #       flash('exust v', 'error')
+  #       return render_template('forms/new_venue.html', form=form)
+  #   db.session.add(NewVenue)
+  #   db.session.commit()
+  # except:
+  #           error = True
+  #           db.session.rollback()
+  #           print(sys.exc_info())
+  # finally:
+  #           db.session.close()
+  # if not error:
+  #           flash('Venue ' + request.form['name'] + ' was successfully listed!', 'success')
+  #           return redirect(url_for('index'))
+  # else:
+  #           flash('An error occurred. Venue ' +
+  #              request.form['name'] + ' could not be listed.', 'error')
+  #           return render_template('forms/new_venue.html', form=form)
+  form = VenueForm(request.form)
+  new_venue = Venue()
+  if request.form['phone'].isalpha():
+            flash('Invalid phone number format', 'error')
             return render_template('forms/new_venue.html', form=form)
+  if not re.search(r"\d{3}[-]\d{3}[-]\d{4}$", request.form['phone']):
+            flash('Invalid phone number', 'error')
+            return render_template('forms/new_venue.html', form=form)
+  if form.validate():
+      # TODO: insert form data as a new Venue record in the db, instead
+      # TODO: modify data to be the data object returned from db insertion
+      
+      new_venue.name = request.form['name']
+      new_venue.city = request.form['city']
+      new_venue.state = request.form['state']
+      new_venue.address = request.form['address']
+      new_venue.phone = request.form['phone']
+      new_venue.facebook_link = request.form['facebook_link']
+      new_venue.genres = request.form['genres']
+      new_venue.website = request.form['website_link']
+      new_venue.image_link = request.form['image_link']
+      try:
+        db.session.add(new_venue)
+        db.session.commit()
+
+        # on successful db insert, flash success
+        flash('Venue ' + request.form['name'] + ' was successfully listed!')
+      except:
+        db.session.rollback()
+        print(sys.exc_info())
+        flash('An error occured. Venue' + request.form["name"] + 'could not be listed')
+        # TODO: on unsuccessful db insert, flash an error instead.
+        # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+        # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+      finally:
+        db.session.close()
+  else:
+    print("\n\n", form.errors)
+    print(f'Error with venue {new_venue.name}')
+  return render_template('pages/home.html')
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
   # TODO: Complete this endpoint for taking a venue_id, and using
